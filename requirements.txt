@@ -1,0 +1,9 @@
+line-bot-sdk==3.5.0
+fastapi
+uvicorn[standard]
+google.generativeai
+yfinance
+pydantic
+tiktoken
+Pillow
+git+https://github.com/ozgur/python-firebase
