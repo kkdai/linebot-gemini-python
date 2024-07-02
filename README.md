@@ -14,7 +14,6 @@
 - Google Generative AI
 - Aiohttp
 - PIL (Python Imaging Library)
-- Firebase
 
 ## Setup
 
@@ -23,7 +22,6 @@
    - `ChannelSecret`: Your LINE channel secret.
    - `ChannelAccessToken`: Your LINE channel access token.
    - `GEMINI_API_KEY`: Your Gemini API key for AI processing.
-   - `FIREBASE_URL`: Your Firebase database URL.
 3. Install the required dependencies by running `pip install -r requirements.txt`.
 4. Start the FastAPI server with `uvicorn main:app --reload`.
 
