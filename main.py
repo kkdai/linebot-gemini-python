@@ -70,8 +70,6 @@ async def handle_callback(request: Request):
         if not isinstance(event, MessageEvent):
             continue
 
-        user_id = event.source.user_id
-
         if (event.message.type == "text"):
             # Provide a default value for reply_msg
             msg = event.message.text
