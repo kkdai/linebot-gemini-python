@@ -48,7 +48,6 @@ parser = WebhookParser(channel_secret)
 user_receipt_path = f''
 user_item_path = f''
 user_all_receipts_path = f''
-fdb = firebase.FirebaseApplication(firebase_url, None)
 
 # Initialize the Gemini Pro API
 genai.configure(api_key=gemini_key)
