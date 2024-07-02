@@ -44,11 +44,6 @@ async_http_client = AiohttpAsyncHttpClient(session)
 line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
 parser = WebhookParser(channel_secret)
 
-# Initialize the Firebase Database
-user_receipt_path = f''
-user_item_path = f''
-user_all_receipts_path = f''
-
 # Initialize the Gemini Pro API
 genai.configure(api_key=gemini_key)
 
@@ -73,7 +68,7 @@ async def handle_callback(request: Request):
         if (event.message.type == "text"):
             # Provide a default value for reply_msg
             msg = event.message.text
-            ret = generate_gemini_text_complete(msg)
+            ret = generate_gemini_text_complete(f'{msg}, reply in zh-TW:')
             reply_msg = TextSendMessage(text=ret.text)
             await line_bot_api.reply_message(
                 event.reply_token,
