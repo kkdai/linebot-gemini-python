@@ -4,6 +4,9 @@
 
 ## Screenshot
 
+![image](https://github.com/kkdai/linebot-gemini-python/assets/2252691/466fbe7c-e704-45f9-8584-91cfa2c99e48)
+
+
 ## Features
 
 ## Technologies Used
