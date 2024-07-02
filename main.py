@@ -14,19 +14,15 @@ import google.generativeai as genai
 import os
 import sys
 from io import BytesIO
-import json
 
 import aiohttp
 import PIL.Image
-from firebase import firebase
 
 
 # get channel_secret and channel_access_token from your environment variable
 channel_secret = os.getenv('ChannelSecret', None)
 channel_access_token = os.getenv('ChannelAccessToken', None)
 gemini_key = os.getenv('GEMINI_API_KEY')
-firebase_url = os.getenv('FIREBASE_URL')
-
 imgage_prompt = '''
 Describe this image with scientific detail, reply in zh-TW:
 '''
@@ -39,9 +35,6 @@ if channel_access_token is None:
     sys.exit(1)
 if gemini_key is None:
     print('Specify GEMINI_API_KEY as environment variable.')
-    sys.exit(1)
-if firebase_url is None:
-    print('Specify FIREBASE_URL as environment variable.')
     sys.exit(1)
 
 # Initialize the FastAPI app for LINEBot
@@ -97,7 +90,6 @@ async def handle_callback(request: Request):
                 image_content += s
             img = PIL.Image.open(BytesIO(image_content))
 
-            # Using Gemini-Vision process image and get the JSON representation of the receipt data.
             result = generate_result_from_image(img, imgage_prompt)
             reply_msg = TextSendMessage(text=result.text)
             await line_bot_api.reply_message(
