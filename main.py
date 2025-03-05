@@ -98,7 +98,7 @@ def generate_gemini_text_complete(prompt):
     """
     Generate a text completion using the generative model.
     """
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
     response = model.generate_content(prompt)
     return response
 
@@ -108,7 +108,7 @@ def generate_result_from_image(img, prompt):
     Generate a image vision result using the generative model.
     """
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash-lite')
     response = model.generate_content([prompt, img], stream=True)
     response.resolve()
     return response
