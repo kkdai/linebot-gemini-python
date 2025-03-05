@@ -14,6 +14,7 @@ import sys
 from io import BytesIO
 import aiohttp
 import PIL.Image
+import base64
 
 # Import LangChain components with Vertex AI
 from langchain_google_vertexai import ChatVertexAI
@@ -136,21 +137,31 @@ def generate_vision_with_langchain(img, prompt):
     """
     Generate a image vision result using LangChain with Vertex AI model.
     """
-    # Convert PIL Image to bytes
+    # Convert PIL Image to base64 encoded string
     img_byte_arr = BytesIO()
     img.save(img_byte_arr, format=img.format or 'JPEG')
     img_bytes = img_byte_arr.getvalue()
+    base64_image = base64.b64encode(img_bytes).decode('utf-8')
 
-    # Create a message with both text and image using proper Vertex AI format
+    # Create a message with both text and image using the correct Vertex AI format
     message = HumanMessage(
         content=[
             {"type": "text", "text": prompt},
-            # Use blob for binary data
-            {"type": "image_url", "image_url": {"blob": img_bytes}}
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": base64_image
+                }
+            }
         ]
     )
 
-    # Call the vision model
-    response = vision_model.invoke([message])
-
-    return response.content
+    try:
+        # Call the vision model
+        response = vision_model.invoke([message])
+        return response.content
+    except Exception as e:
+        print(f"Error in vision model: {str(e)}")
+        return f"I encountered an error processing this image: {str(e)}"
