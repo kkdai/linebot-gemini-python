@@ -9,27 +9,29 @@ from linebot import (
     AsyncLineBotApi, WebhookParser
 )
 from fastapi import Request, FastAPI, HTTPException
-import google.generativeai as genai
 import os
 import sys
 from io import BytesIO
 import aiohttp
 import PIL.Image
 
-# Import LangChain components
-from langchain_google_genai import ChatGoogleGenerativeAI
+# Import LangChain components with Vertex AI
+from langchain_google_vertexai import ChatVertexAI
 from langchain.schema.messages import HumanMessage, SystemMessage
-from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 
 # get channel_secret and channel_access_token from your environment variable
 channel_secret = os.getenv('ChannelSecret', None)
 channel_access_token = os.getenv('ChannelAccessToken', None)
-gemini_key = os.getenv('GEMINI_API_KEY')
 imgage_prompt = '''
 Describe this image with scientific detail, reply in zh-TW:
 '''
+
+# Vertex AI needs a project ID and possibly authentication
+google_project_id = os.getenv('GOOGLE_PROJECT_ID')
+# Location for Vertex AI resources, e.g., "us-central1"
+google_location = os.getenv('GOOGLE_LOCATION', 'us-central1')
 
 if channel_secret is None:
     print('Specify ChannelSecret as environment variable.')
@@ -37,8 +39,8 @@ if channel_secret is None:
 if channel_access_token is None:
     print('Specify ChannelAccessToken as environment variable.')
     sys.exit(1)
-if gemini_key is None:
-    print('Specify GEMINI_API_KEY as environment variable.')
+if google_project_id is None:
+    print('Specify GOOGLE_PROJECT_ID as environment variable.')
     sys.exit(1)
 
 # Initialize the FastAPI app for LINEBot
@@ -48,12 +50,21 @@ async_http_client = AiohttpAsyncHttpClient(session)
 line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
 parser = WebhookParser(channel_secret)
 
-# Initialize LangChain with Gemini
-os.environ["GOOGLE_API_KEY"] = gemini_key
+# Create LangChain Vertex AI model instances
+# For Vertex AI, we use "gemini-2.0-flash" instead of "gemini-2.0-flash-lite"
+text_model = ChatVertexAI(
+    model_name="gemini-2.0-flash",
+    project=google_project_id,
+    location=google_location,
+    max_output_tokens=1024
+)
 
-# Create LangChain Gemini model instances
-text_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
-vision_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+vision_model = ChatVertexAI(
+    model_name="gemini-2.0-flash",
+    project=google_project_id,
+    location=google_location,
+    max_output_tokens=1024
+)
 
 
 @app.post("/")
@@ -74,7 +85,7 @@ async def handle_callback(request: Request):
             continue
 
         if (event.message.type == "text"):
-            # Process text message using LangChain
+            # Process text message using LangChain with Vertex AI
             msg = event.message.text
             response = generate_text_with_langchain(f'{msg}, reply in zh-TW:')
             reply_msg = TextSendMessage(text=response)
@@ -105,7 +116,7 @@ async def handle_callback(request: Request):
 
 def generate_text_with_langchain(prompt):
     """
-    Generate a text completion using LangChain with Gemini model.
+    Generate a text completion using LangChain with Vertex AI model.
     """
     # Create a chat prompt template with system instructions
     prompt_template = ChatPromptTemplate.from_messages([
@@ -123,13 +134,13 @@ def generate_text_with_langchain(prompt):
 
 def generate_vision_with_langchain(img, prompt):
     """
-    Generate a image vision result using LangChain with Gemini model.
+    Generate a image vision result using LangChain with Vertex AI model.
     """
     # Create a message with both text and image
     message = HumanMessage(
         content=[
             {"type": "text", "text": prompt},
-            {"type": "image", "image": img}
+            {"type": "image_url", "image_url": {"url": img}}
         ]
     )
 

@@ -3,7 +3,8 @@ fastapi
 uvicorn[standard]
 google.generativeai
 langchain
-langchain-google-genai
+langchain-google-vertexai
+google-cloud-aiplatform
 yfinance
 pydantic
 tiktoken
