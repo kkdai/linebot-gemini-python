@@ -13,9 +13,14 @@ import google.generativeai as genai
 import os
 import sys
 from io import BytesIO
-
 import aiohttp
 import PIL.Image
+
+# Import LangChain components
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.schema.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage
+from langchain_core.prompts import ChatPromptTemplate
 
 
 # get channel_secret and channel_access_token from your environment variable
@@ -43,8 +48,12 @@ async_http_client = AiohttpAsyncHttpClient(session)
 line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
 parser = WebhookParser(channel_secret)
 
-# Initialize the Gemini Pro API
-genai.configure(api_key=gemini_key)
+# Initialize LangChain with Gemini
+os.environ["GOOGLE_API_KEY"] = gemini_key
+
+# Create LangChain Gemini model instances
+text_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
+vision_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite")
 
 
 @app.post("/")
@@ -65,10 +74,10 @@ async def handle_callback(request: Request):
             continue
 
         if (event.message.type == "text"):
-            # Provide a default value for reply_msg
+            # Process text message using LangChain
             msg = event.message.text
-            ret = generate_gemini_text_complete(f'{msg}, reply in zh-TW:')
-            reply_msg = TextSendMessage(text=ret.text)
+            response = generate_text_with_langchain(f'{msg}, reply in zh-TW:')
+            reply_msg = TextSendMessage(text=response)
             await line_bot_api.reply_message(
                 event.reply_token,
                 reply_msg
@@ -81,8 +90,8 @@ async def handle_callback(request: Request):
                 image_content += s
             img = PIL.Image.open(BytesIO(image_content))
 
-            result = generate_result_from_image(img, imgage_prompt)
-            reply_msg = TextSendMessage(text=result.text)
+            result = generate_vision_with_langchain(img, imgage_prompt)
+            reply_msg = TextSendMessage(text=result)
             await line_bot_api.reply_message(
                 event.reply_token,
                 reply_msg
@@ -94,21 +103,37 @@ async def handle_callback(request: Request):
     return 'OK'
 
 
-def generate_gemini_text_complete(prompt):
+def generate_text_with_langchain(prompt):
     """
-    Generate a text completion using the generative model.
+    Generate a text completion using LangChain with Gemini model.
     """
-    model = genai.GenerativeModel('gemini-2.0-flash-lite')
-    response = model.generate_content(prompt)
-    return response
+    # Create a chat prompt template with system instructions
+    prompt_template = ChatPromptTemplate.from_messages([
+        SystemMessage(
+            content="You are a helpful assistant that responds in Traditional Chinese (zh-TW)."),
+        HumanMessage(content=prompt)
+    ])
+
+    # Format the prompt and call the model
+    formatted_prompt = prompt_template.format_messages()
+    response = text_model.invoke(formatted_prompt)
+
+    return response.content
 
 
-def generate_result_from_image(img, prompt):
+def generate_vision_with_langchain(img, prompt):
     """
-    Generate a image vision result using the generative model.
+    Generate a image vision result using LangChain with Gemini model.
     """
+    # Create a message with both text and image
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": prompt},
+            {"type": "image", "image": img}
+        ]
+    )
 
-    model = genai.GenerativeModel('gemini-2.0-flash-lite')
-    response = model.generate_content([prompt, img], stream=True)
-    response.resolve()
-    return response
+    # Call the vision model
+    response = vision_model.invoke([message])
+
+    return response.content
