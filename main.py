@@ -136,11 +136,17 @@ def generate_vision_with_langchain(img, prompt):
     """
     Generate a image vision result using LangChain with Vertex AI model.
     """
-    # Create a message with both text and image
+    # Convert PIL Image to bytes
+    img_byte_arr = BytesIO()
+    img.save(img_byte_arr, format=img.format or 'JPEG')
+    img_bytes = img_byte_arr.getvalue()
+
+    # Create a message with both text and image using proper Vertex AI format
     message = HumanMessage(
         content=[
             {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": img}}
+            # Use blob for binary data
+            {"type": "image_url", "image_url": {"blob": img_bytes}}
         ]
     )
 
