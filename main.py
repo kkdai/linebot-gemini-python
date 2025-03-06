@@ -60,13 +60,6 @@ text_model = ChatVertexAI(
     max_output_tokens=1024
 )
 
-vision_model = ChatVertexAI(
-    model_name="gemini-2.0-flash-001",
-    project=google_project_id,
-    location=google_location,
-    max_output_tokens=1024
-)
-
 
 @app.post("/")
 async def handle_callback(request: Request):
@@ -95,19 +88,6 @@ async def handle_callback(request: Request):
                 reply_msg
             )
         elif (event.message.type == "image"):
-            message_content = await line_bot_api.get_message_content(
-                event.message.id)
-            image_content = b''
-            async for s in message_content.iter_content():
-                image_content += s
-            img = PIL.Image.open(BytesIO(image_content))
-
-            result = generate_vision_with_langchain(img, imgage_prompt)
-            reply_msg = TextSendMessage(text=result)
-            await line_bot_api.reply_message(
-                event.reply_token,
-                reply_msg
-            )
             return 'OK'
         else:
             continue
@@ -131,37 +111,3 @@ def generate_text_with_langchain(prompt):
     response = text_model.invoke(formatted_prompt)
 
     return response.content
-
-
-def generate_vision_with_langchain(img, prompt):
-    """
-    Generate a image vision result using LangChain with Vertex AI model.
-    """
-    # Convert PIL Image to base64 encoded string
-    img_byte_arr = BytesIO()
-    img.save(img_byte_arr, format=img.format or 'JPEG')
-    img_bytes = img_byte_arr.getvalue()
-    base64_image = base64.b64encode(img_bytes).decode('utf-8')
-
-    # Create a message with both text and image using the correct Vertex AI format
-    message = HumanMessage(
-        content=[
-            {"type": "text", "text": prompt},
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/jpeg",
-                    "data": base64_image
-                }
-            }
-        ]
-    )
-
-    try:
-        # Call the vision model
-        response = vision_model.invoke([message])
-        return response.content
-    except Exception as e:
-        print(f"Error in vision model: {str(e)}")
-        return f"I encountered an error processing this image: {str(e)}"
