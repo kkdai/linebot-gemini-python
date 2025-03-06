@@ -1,45 +1,88 @@
-# Gemini Helper
+# Gemini Helper with LangChain and Vertex AI
 
 ## Project Background
+
+This project is a LINE bot that uses Google's Vertex AI Gemini models through LangChain to generate responses to both text and image inputs. The bot can answer questions in Traditional Chinese and provide detailed descriptions of images.
 
 ## Screenshot
 
 ![image](https://github.com/kkdai/linebot-gemini-python/assets/2252691/466fbe7c-e704-45f9-8584-91cfa2c99e48)
 
-
 ## Features
+
+- Text message processing using Gemini AI in Traditional Chinese
+- Image analysis with scientific detail in Traditional Chinese
+- Integration with LINE Messaging API for easy mobile access
+- Built with FastAPI for efficient asynchronous processing
 
 ## Technologies Used
 
 - Python 3
 - FastAPI
 - LINE Messaging API
-- Google Generative AI
+- Google Vertex AI (Gemini 2.0 Flash)
+- LangChain
 - Aiohttp
 - PIL (Python Imaging Library)
 
 ## Setup
 
 1. Clone the repository to your local machine.
-2. Set the following environment variables:
-   - `ChannelSecret`: Your LINE channel secret.
-   - `ChannelAccessToken`: Your LINE channel access token.
-   - `GEMINI_API_KEY`: Your Gemini API key for AI processing.
-3. Install the required dependencies by running `pip install -r requirements.txt`.
-4. Start the FastAPI server with `uvicorn main:app --reload`.
+2. Set up Google Cloud:
+   - Create a Google Cloud project
+   - Enable Vertex AI API
+   - Set up authentication (service account or application default credentials)
+
+3. Set the following environment variables:
+   - `ChannelSecret`: Your LINE channel secret
+   - `ChannelAccessToken`: Your LINE channel access token
+   - `GOOGLE_PROJECT_ID`: Your Google Cloud Project ID
+   - `GOOGLE_LOCATION`: Google Cloud region (default: us-central1)
+   - Optional: `GOOGLE_APPLICATION_CREDENTIALS`: Path to service account key file (if running locally)
+
+4. Install the required dependencies:
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+5. Start the FastAPI server:
+
+   ```
+   uvicorn main:app --reload
+   ```
+
+6. Set up your LINE bot webhook URL to point to your server's endpoint.
 
 ## Usage
 
-To use the Receipt Helper, send a picture of your receipt to the LINE bot. The bot will process the image, extract the data, and provide a JSON representation of the receipt. For text-based commands or queries, simply send the command or query as a message to the bot.
+### Text Processing
 
-## Commands
+Send any text message to the LINE bot, and it will use Vertex AI's Gemini model to generate a response in Traditional Chinese.
 
-- `!清空`: Clears all the scanned receipt history for the user.
+### Image Processing
 
-## Contributing
+Send an image to the bot, and it will analyze and describe the image with scientific detail in Traditional Chinese.
 
-If you'd like to contribute to this project, please feel free to submit a pull request.
+## Deployment Options
 
-## License
+### Local Development
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Use ngrok or similar tools to expose your local server to the internet for webhook access:
+
+### Google Cloud Run
+
+1. Install the Google Cloud SDK and authenticate with your Google Cloud account.
+2. Build the Docker image:
+
+   ```
+   gcloud builds submit --tag gcr.io/$GOOGLE_PROJECT_ID/linebot-gemini
+   ```
+
+3. Deploy the Docker image to Cloud Run:
+
+   ```
+   gcloud run deploy linebot-gemini --image gcr.io/$GOOGLE_PROJECT_ID/linebot-gemini --platform managed --region $GOOGLE_LOCATION --allow-unauthenticated
+   ```
+
+4. Set up your LINE bot webhook URL to point to the Cloud Run service URL.
