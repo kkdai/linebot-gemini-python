@@ -47,6 +47,10 @@ parser = WebhookParser(channel_secret)
 # Initialize the Gemini Pro API
 genai.configure(api_key=gemini_key)
 
+@app.get("/")
+async def root():
+    return {"message": "Service is running!"}
+
 
 @app.post("/")
 async def handle_callback(request: Request):
