@@ -81,6 +81,8 @@ async def handle_callback(request: Request):
         if (event.message.type == "text"):
             # Process text message using LangChain with Vertex AI
             msg = event.message.text
+            user_id = event.source.user_id
+            print(f"Received message: {msg} from user: {user_id}")
             response = generate_text_with_langchain(f'{msg}, reply in zh-TW:')
             reply_msg = TextSendMessage(text=response)
             await line_bot_api.reply_message(
