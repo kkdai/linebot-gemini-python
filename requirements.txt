@@ -1,9 +1,11 @@
-line-bot-sdk==3.5.0
+line-bot-sdk==3.14.0
 fastapi
 uvicorn[standard]
 google.generativeai
+langchain
+langchain-google-vertexai
+google-cloud-aiplatform
 yfinance
 pydantic
 tiktoken
 Pillow
-git+https://github.com/ozgur/python-firebase
