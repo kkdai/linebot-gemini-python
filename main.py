@@ -60,6 +60,10 @@ text_model = ChatVertexAI(
     max_output_tokens=1024
 )
 
+@app.get("/")
+async def root():
+    return {"message": "Service is running!"}
+
 
 @app.post("/")
 async def handle_callback(request: Request):
