@@ -132,9 +132,8 @@ async def handle_callback(request: Request):
             print(f"Received image from user: {user_id}")
 
             message_content = await line_bot_api.get_message_content(event.message.id)
-            image_bytes = await message_content.content.read()
+            image_bytes = await message_content.read()
             image_stream = BytesIO(image_bytes)
-            image_stream.seek(0)
 
             file_name = f"{uuid.uuid4()}.jpg"
             gcs_uri = None
