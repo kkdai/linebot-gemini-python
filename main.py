@@ -200,7 +200,7 @@ def generate_image_description(image_uri):
             },
             {
                 "type": "image_url",
-                "image_url": image_uri
+                "image_url": {"url": image_uri}
             },
         ]
     )
