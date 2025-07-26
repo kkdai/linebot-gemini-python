@@ -9,3 +9,4 @@ yfinance
 pydantic
 tiktoken
 Pillow
+google-cloud-storage

@@ -15,6 +15,9 @@ from io import BytesIO
 import aiohttp
 import PIL.Image
 import base64
+import uuid
+from google.cloud import storage
+
 
 # Import LangChain components with Vertex AI
 from langchain_google_vertexai import ChatVertexAI
@@ -33,6 +36,9 @@ Describe this image with scientific detail, reply in zh-TW:
 google_project_id = os.getenv('GOOGLE_PROJECT_ID')
 # Location for Vertex AI resources, e.g., "us-central1"
 google_location = os.getenv('GOOGLE_LOCATION', 'us-central1')
+# Google Cloud Storage bucket for image uploads
+google_storage_bucket = os.getenv('GOOGLE_STORAGE_BUCKET', None)
+
 
 if channel_secret is None:
     print('Specify ChannelSecret as environment variable.')
@@ -43,6 +49,10 @@ if channel_access_token is None:
 if google_project_id is None:
     print('Specify GOOGLE_PROJECT_ID as environment variable.')
     sys.exit(1)
+if google_storage_bucket is None:
+    print('Specify GOOGLE_STORAGE_BUCKET as environment variable.')
+    sys.exit(1)
+
 
 # Initialize the FastAPI app for LINEBot
 app = FastAPI()
@@ -51,14 +61,42 @@ async_http_client = AiohttpAsyncHttpClient(session)
 line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
 parser = WebhookParser(channel_secret)
 
-# Create LangChain Vertex AI model instances
-# For Vertex AI, we use "gemini-2.0-flash" instead of "gemini-2.0-flash-lite"
-text_model = ChatVertexAI(
-    model_name="gemini-2.0-flash",
+# Using a single, powerful multimodal model for both text and images.
+# gemini-1.5-flash-001 is a powerful, cost-effective model for multimodal tasks.
+model = ChatVertexAI(
+    model_name="gemini-1.5-flash-001",
     project=google_project_id,
     location=google_location,
-    max_output_tokens=1024
+    max_output_tokens=2048  # Increased token limit for detailed image descriptions
 )
+
+
+def upload_to_gcs(file_stream, file_name, bucket_name):
+    """Uploads a file to the bucket."""
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+
+        blob.upload_from_file(file_stream, content_type='image/jpeg')
+
+        # Return the GCS URI
+        return f"gs://{bucket_name}/{file_name}"
+    except Exception as e:
+        print(f"Error uploading to GCS: {e}")
+        return None
+
+
+def delete_from_gcs(bucket_name, blob_name):
+    """Deletes a blob from the bucket."""
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        blob.delete()
+        print(f"Blob {blob_name} deleted from bucket {bucket_name}.")
+    except Exception as e:
+        print(f"Error deleting from GCS: {e}")
 
 
 @app.post("/")
@@ -90,7 +128,33 @@ async def handle_callback(request: Request):
                 reply_msg
             )
         elif (event.message.type == "image"):
-            return 'OK'
+            user_id = event.source.user_id
+            print(f"Received image from user: {user_id}")
+
+            message_content = await line_bot_api.get_message_content(event.message.id)
+            image_stream = BytesIO(message_content.content)
+            image_stream.seek(0)
+
+            file_name = f"{uuid.uuid4()}.jpg"
+            gcs_uri = None
+            response = "抱歉，處理您的圖片時發生錯誤。"  # Default error message
+
+            try:
+                gcs_uri = upload_to_gcs(
+                    image_stream, file_name, google_storage_bucket)
+                if gcs_uri:
+                    print(f"Image uploaded to {gcs_uri}")
+                    response = generate_image_description(gcs_uri)
+            finally:
+                # Clean up the GCS file if it was uploaded
+                if gcs_uri:
+                    delete_from_gcs(google_storage_bucket, file_name)
+
+            reply_msg = TextSendMessage(text=response)
+            await line_bot_api.reply_message(
+                event.reply_token,
+                reply_msg
+            )
         else:
             continue
 
@@ -110,6 +174,28 @@ def generate_text_with_langchain(prompt):
 
     # Format the prompt and call the model
     formatted_prompt = prompt_template.format_messages()
-    response = text_model.invoke(formatted_prompt)
+    response = model.invoke(formatted_prompt)
 
+    return response.content
+
+
+def generate_image_description(image_uri):
+    """
+    Generate a description for an image using LangChain with Vertex AI.
+    """
+    # The prompt is already defined globally as imgage_prompt
+    message = HumanMessage(
+        content=[
+            {
+                "type": "text",
+                "text": imgage_prompt
+            },
+            {
+                "type": "image_url",
+                "image_url": image_uri
+            },
+        ]
+    )
+
+    response = model.invoke([message])
     return response.content
