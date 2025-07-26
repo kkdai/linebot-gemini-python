@@ -62,9 +62,9 @@ line_bot_api = AsyncLineBotApi(channel_access_token, async_http_client)
 parser = WebhookParser(channel_secret)
 
 # Using a single, powerful multimodal model for both text and images.
-# gemini-1.5-flash-001 is a powerful, cost-effective model for multimodal tasks.
+# gemini-2.0-flash is a powerful, cost-effective model for multimodal tasks.
 model = ChatVertexAI(
-    model_name="gemini-1.5-flash-001",
+    model_name="gemini-2.0-flash-lite",
     project=google_project_id,
     location=google_location,
     max_output_tokens=2048  # Increased token limit for detailed image descriptions
