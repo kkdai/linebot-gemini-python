@@ -54,7 +54,7 @@ parser = WebhookParser(channel_secret)
 # Create LangChain Vertex AI model instances
 # For Vertex AI, we use "gemini-2.0-flash" instead of "gemini-2.0-flash-lite"
 text_model = ChatVertexAI(
-    model_name="gemini-2.0-flash-001",
+    model_name="gemini-2.0-flash",
     project=google_project_id,
     location=google_location,
     max_output_tokens=1024
