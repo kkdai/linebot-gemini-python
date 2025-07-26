@@ -132,10 +132,16 @@ async def handle_callback(request: Request):
             print(f"Received image from user: {user_id}")
 
             message_content = await line_bot_api.get_message_content(event.message.id)
-            image_content = b''
-            async for s in message_content.iter_content():
-                image_content += s
-            img_stream = PIL.Image.open(BytesIO(image_content))
+            
+            # Asynchronously read all content chunks into a byte string
+            image_bytes = b''
+            async for chunk in message_content.iter_content():
+                image_bytes += chunk
+            
+            # Create an in-memory binary stream from the bytes
+            image_stream = BytesIO(image_bytes)
+            # Reset the stream's pointer to the beginning for the upload function
+            image_stream.seek(0)
 
             file_name = f"{uuid.uuid4()}.jpg"
             gcs_uri = None
@@ -143,7 +149,7 @@ async def handle_callback(request: Request):
 
             try:
                 gcs_uri = upload_to_gcs(
-                    img_stream, file_name, google_storage_bucket)
+                    image_stream, file_name, google_storage_bucket)
                 if gcs_uri:
                     print(f"Image uploaded to {gcs_uri}")
                     response = generate_image_description(gcs_uri)
