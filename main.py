@@ -13,8 +13,6 @@ import os
 import sys
 from io import BytesIO
 import aiohttp
-import PIL.Image
-import base64
 import uuid
 from google.cloud import storage
 
@@ -67,7 +65,8 @@ model = ChatVertexAI(
     model_name="gemini-2.0-flash",
     project=google_project_id,
     location=google_location,
-    max_output_tokens=2048  # Increased token limit for detailed image descriptions
+    # Increased token limit for detailed image descriptions
+    max_output_tokens=2048
 )
 
 
@@ -121,7 +120,9 @@ async def handle_callback(request: Request):
             msg = event.message.text
             user_id = event.source.user_id
             print(f"Received message: {msg} from user: {user_id}")
-            response = generate_text_with_langchain(f'{msg}, reply in zh-TW:')
+            response = generate_text_with_langchain(
+                f'{msg}, reply in zh-TW:'
+            )
             reply_msg = TextSendMessage(text=response)
             await line_bot_api.reply_message(
                 event.reply_token,
@@ -131,21 +132,24 @@ async def handle_callback(request: Request):
             user_id = event.source.user_id
             print(f"Received image from user: {user_id}")
 
-            message_content = await line_bot_api.get_message_content(event.message.id)
-            
+            message_content = await line_bot_api.get_message_content(
+                event.message.id
+            )
+
             # Asynchronously read all content chunks into a byte string
             image_bytes = b''
             async for chunk in message_content.iter_content():
                 image_bytes += chunk
-            
+
             # Create an in-memory binary stream from the bytes
             image_stream = BytesIO(image_bytes)
-            # Reset the stream's pointer to the beginning for the upload function
+            # Reset the stream's pointer to the beginning for the upload
             image_stream.seek(0)
 
             file_name = f"{uuid.uuid4()}.jpg"
             gcs_uri = None
-            response = "抱歉，處理您的圖片時發生錯誤。"  # Default error message
+            # Default error message
+            response = "抱歉，處理您的圖片時發生錯誤。"
 
             try:
                 gcs_uri = upload_to_gcs(
@@ -176,7 +180,9 @@ def generate_text_with_langchain(prompt):
     # Create a chat prompt template with system instructions
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(
-            content="You are a helpful assistant that responds in Traditional Chinese (zh-TW)."),
+            content="You are a helpful assistant that responds in "
+                    "Traditional Chinese (zh-TW)."
+        ),
         HumanMessage(content=prompt)
     ])
 
@@ -189,6 +195,7 @@ def generate_text_with_langchain(prompt):
 
 def generate_image_description(image_uri):
     """
+
     Generate a description for an image using LangChain with Vertex AI.
     """
     # The prompt is already defined globally as imgage_prompt
