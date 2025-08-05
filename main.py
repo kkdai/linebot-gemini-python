@@ -15,7 +15,6 @@ from io import BytesIO
 import aiohttp
 import uuid
 from google.cloud import storage
-import json
 
 
 # Import LangChain components with Vertex AI
@@ -27,11 +26,8 @@ from langchain_core.prompts import ChatPromptTemplate
 # get channel_secret and channel_access_token from your environment variable
 channel_secret = os.getenv('ChannelSecret', None)
 channel_access_token = os.getenv('ChannelAccessToken', None)
-image_prompt = '''
-Analyze the image and reply in zh-TW.
-If the image is a business card, extract the information and format it as a JSON object with keys: "name", "company", "title", "phone", "email", and "address". If a field is not available, use "N/A".
-If it\'s not a business card, describe the image with scientific detail.
-Do not include any explanatory text in your response if it is a business card, only the JSON object.
+imgage_prompt = '''
+Describe this image with scientific detail, reply in zh-TW:
 '''
 
 # Vertex AI needs a project ID and possibly authentication
@@ -66,7 +62,7 @@ parser = WebhookParser(channel_secret)
 # Using a single, powerful multimodal model for both text and images.
 # gemini-2.0-flash is a powerful, cost-effective model for multimodal tasks.
 model = ChatVertexAI(
-    model_name="gemini-1.5-flash-001",
+    model_name="gemini-2.0-flash",
     project=google_project_id,
     location=google_location,
     # Increased token limit for detailed image descriptions
@@ -147,7 +143,7 @@ async def handle_callback(request: Request):
 
             # Create an in-memory binary stream from the bytes
             image_stream = BytesIO(image_bytes)
-            # Reset the stream\'s pointer to the beginning for the upload
+            # Reset the stream's pointer to the beginning for the upload
             image_stream.seek(0)
 
             file_name = f"{uuid.uuid4()}.jpg"
@@ -160,47 +156,7 @@ async def handle_callback(request: Request):
                     image_stream, file_name, google_storage_bucket)
                 if gcs_uri:
                     print(f"Image uploaded to {gcs_uri}")
-                    response_text = generate_image_description(gcs_uri)
-                    try:
-                        # The model might wrap the JSON in markdown ```json ... ```
-                        if '```json' in response_text:
-                            response_text = response_text.split('```json')[1].split('```')[0].strip()
-
-                        card_data = json.loads(response_text)
-
-                        # FIX: Handle case where JSON is a list containing one object
-                        if isinstance(card_data, list) and card_data:
-                            card_data = card_data[0]
-
-                        if isinstance(card_data, dict):
-                            # Lowercase keys for consistency
-                            card_data = {k.lower(): v for k, v in card_data.items()}
-
-                            # Format the business card data for display
-                            name = card_data.get('name', 'N/A')
-                            company = card_data.get('company', 'N/A')
-                            title = card_data.get('title', 'N/A')
-                            phone = card_data.get('phone', 'N/A')
-                            email = card_data.get('email', 'N/A')
-                            address = card_data.get('address', 'N/A')
-
-                            if isinstance(phone, list):
-                                phone = ', '.join(phone)
-
-                            response = (
-                                f"名片資訊：\n"
-                                f"姓名：{name}\n"
-                                f"公司：{company}\n"
-                                f"職稱：{title}\n"
-                                f"電話：{phone}\n"
-                                f"Email：{email}\n"
-                                f"地址：{address}"
-                            )
-                        else:
-                            response = response_text
-                    except (json.JSONDecodeError, AttributeError):
-                        # Not a business card JSON, so it\'s a description
-                        response = response_text
+                    response = generate_image_description(gcs_uri)
             finally:
                 # Clean up the GCS file if it was uploaded
                 if gcs_uri:
@@ -242,12 +198,12 @@ def generate_image_description(image_uri):
 
     Generate a description for an image using LangChain with Vertex AI.
     """
-    # The prompt is already defined globally as image_prompt
+    # The prompt is already defined globally as imgage_prompt
     message = HumanMessage(
         content=[
             {
                 "type": "text",
-                "text": image_prompt
+                "text": imgage_prompt
             },
             {
                 "type": "image_url",
